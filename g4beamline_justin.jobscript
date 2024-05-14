@@ -1,0 +1,98 @@
+#!/bin/bash
+
+SECONDS=0
+#export PMOMENTUM=80000
+export POLARITY="${POLARITY:-+}"
+
+if [ $POLARITY != "+" ] && [ ${POLARITY} != "-" ]; then
+  echo "ERROR MUST SUPPLY + OR - TO POLARITY"
+  exit 1
+fi
+
+export PMOMENTUM="${POLARITY:-+}80000"
+echo "PMOMENTUM: ${PMOMENTUM}"
+
+export INFILE=H4.in
+export CENTRALP="${CENTRALP:-1}"
+export MOMENTUMVLE="${POLARITY}${CENTRALP}" #"3"
+echo "MOMENTUMVLE: ${MOMENTUMVLE}"
+
+export PARTPERJOB=${NPART:-100}
+export ADDPARAM="momentumVLE=$MOMENTUMVLE pMomentum=$PMOMENTUM"
+export ADDFILES=""
+
+JOBID=1
+#export JOBID=$(($st+1)) ##TODO -- REPLACE WITH JUSTIN JOB
+
+DID_PFN_RSE=`$JUSTIN_PATH/justin-get-file`
+echo "did_pfn_rse $DID_PFN_RSE"
+pfn=`echo $DID_PFN_RSE | cut -f2 -d' '`
+
+echo $INPUT_DIR
+ls $INPUT_DIR
+#echo $G4DATA_DIR
+#ls $G4DATA_DIR
+#
+#echo $G4BL_DIR
+#ls $G4BL_DIR
+#
+#echo $PACK_DIR
+#ls $PACK_DIR
+
+echo "Unpacking g4bl"
+tar -xzf $INPUT_DIR/g4bl.tar.gz --checkpoint=1000
+if [ $? -ne 0 ]
+then
+  echo "Exiting with error"
+  exit 1
+fi
+
+echo "Unpacking Geant4Data"
+tar -xzf $INPUT_DIR/Geant4Data.tar.gz --checkpoint=1000
+if [ $? -ne 0 ]
+then
+  echo "Exiting with error"
+  exit 1
+fi
+CURDIR=$(pwd)
+echo $CURDIR/Geant4Data > g4bl/.data
+
+
+echo "Unpacking Inputfiles Pack"
+tar -xzf $INPUT_DIR/pack.tar.gz --checkpoint=1000
+if [ $? -ne 0 ]
+then
+  echo "Exiting with error"
+  exit 1
+fi
+
+$CURDIR/g4bl/bin/g4bl $INFILE jobID=$JOBID totNumEv=$PARTPERJOB $ADDPARAM 2>&1 | tee g4bloutput.txt
+
+#Clean up
+rm -rf Geant4Data
+rm -rf g4bl
+
+
+
+#Add timestamp to the output
+now=$(date -u +"%Y%m%dT%H%M%SZ")
+oldname=`ls H4*.root`
+newname=`echo ${oldname} | sed -e "s/.root/_${now}_${pfn}.root/"`
+mv ${oldname} ${newname}
+
+if [ $? -ne 0 ]
+then
+  echo "Exiting with error"
+  exit 1
+else
+  echo "$pfn" > justin-processed-pfns.txt
+fi
+
+#errorsSaving=$((`cat g4bloutput.txt | grep "Error in <T" | wc -l`))
+#if [ $errorsSaving -ne 0 ]
+#then
+#  echo "Exiting with error"
+#  exit 1
+#fi
+#
+#echo "RUNTIME: $SECONDS seconds elapsed."
