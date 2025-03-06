@@ -38,14 +38,15 @@ Several arguments can be provided to the justin jobscript via setting environmen
 these are provided to the job's environment using the following syntax: `--env ENVVAR=VALUE`
 
 Full examples of using this syntax are shown below. For now, the following is a 
-list of all of the environment variables that can be configured for the job
+list of all of the environment variables that can be configured for the job. The last 4 entries are the environment variables corresponding to the 
+tarballs which have been uploaded and unpacked to cvmfs. For now, these must be provided. The rest of the variables have defaults (so they don't have to be provided).
 
 
 | Name  | Description | Default | 
 | ------------- | ------------- | ------------- |
 | POLARITY  | Polarity of beam line ("+" or "-") | + |
 | BEAMLINE  | Which beam line to use ("H4" or "H2") | H4 |
-| CENTRALP  | Momentum setting of VLE -- i.e. entering NP02/4 | 1.0 |
+| CENTRALP  | Momentum setting (in GeV) of VLE -- i.e. entering NP02/4 | 1.0 |
 | NPART     | How many Particles to send at the target (Need at least 100) | 100 |
 | G4DATA_DIR | Location of unpacked G4Data tarball | -- |
 | G4BL_DIR | Location of unpacked g4bl tarball | -- |
@@ -53,7 +54,13 @@ list of all of the environment variables that can be configured for the job
 | INPUT_DIR | Location of unpacked input tarball (contains make_g4bl_metadata.py) | -- |
 
 
-
 ## Example -- Interactive Test
-
+The following will run an interactive test of the jobscript and will impart 1000 particles on the H2 target, using positive polarity settings, with a central momentum of 1.0 GeV/c
+ <pre>
+   justin-test-jobscript --jobscript g4beamline_justin.jobscript --monte-carlo 1 \
+                         --env G4DATA_DIR=$g4data_dir/ --env G4BL_DIR=$g4bl_dir/ \
+                         --env PACK_DIR=$pack_dir/ --env INPUT_DIR=$input_dir/  \
+                         --env BEAMLINE=H2 --env NPART=1000
+ </pre>
+ 
 ## Example -- Full Submission
