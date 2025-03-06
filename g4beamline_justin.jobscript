@@ -1,22 +1,24 @@
 #!/bin/bash
 
 SECONDS=0
-#export PMOMENTUM=80000
-export POLARITY="${POLARITY:-+}"
 
+## Set the poolarity
+export POLARITY="${POLARITY:-+}"
 if [ $POLARITY != "+" ] && [ ${POLARITY} != "-" ]; then
   echo "ERROR MUST SUPPLY + OR - TO POLARITY"
   exit 1
 fi
 
+##Set the upstream momentum
 export PMOMENTUM="${POLARITY:-+}80000"
 echo "PMOMENTUM: ${PMOMENTUM}"
 
 export INFILE=H4.in
-export CENTRALP="${CENTRALP:-1}"
+export CENTRALP="${CENTRALP:-1}" #Set the momentum going into protodune
 export MOMENTUMVLE="${POLARITY}${CENTRALP}" #"3"
 echo "MOMENTUMVLE: ${MOMENTUMVLE}"
 
+##Number of POT to run
 export PARTPERJOB=${NPART:-100}
 export ADDPARAM="momentumVLE=$MOMENTUMVLE pMomentum=$PMOMENTUM"
 export ADDFILES=""
@@ -24,53 +26,62 @@ export ADDFILES=""
 JOBID=1
 #export JOBID=$(($st+1)) ##TODO -- REPLACE WITH JUSTIN JOB
 
+##Get the MC number from this to bookkeep for justin
 DID_PFN_RSE=`$JUSTIN_PATH/justin-get-file`
 echo "did_pfn_rse $DID_PFN_RSE"
 pfn=`echo $DID_PFN_RSE | cut -f2 -d' '`
 
 echo $INPUT_DIR
 ls $INPUT_DIR
-#echo $G4DATA_DIR
-#ls $G4DATA_DIR
-#
-#echo $G4BL_DIR
-#ls $G4BL_DIR
-#
-#echo $PACK_DIR
-#ls $PACK_DIR
 
-echo "Unpacking g4bl"
-tar -xzf $INPUT_DIR/g4bl.tar.gz --checkpoint=1000
-if [ $? -ne 0 ]
-then
-  echo "Exiting with error"
-  exit 1
-fi
+echo $G4DATA_DIR
+ls $G4DATA_DIR
+cp -rs $G4DATA_DIR ./Geant4Data/
 
-echo "Unpacking Geant4Data"
-tar -xzf $INPUT_DIR/Geant4Data.tar.gz --checkpoint=1000
-if [ $? -ne 0 ]
-then
-  echo "Exiting with error"
-  exit 1
-fi
+echo $G4BL_DIR
+ls $G4BL_DIR
+cp -rs $G4BL_DIR ./g4bl/
+
+echo $PACK_DIR
+ls $PACK_DIR
+for i in $PACK_DIR/*; do
+  ln -s $i .
+done
+
+#Unpack all the tars -- TODO: put on cvmfs as a single tar
+#echo "Unpacking g4bl"
+#tar -xzf $INPUT_DIR/g4bl.tar.gz --checkpoint=1000
+#if [ $? -ne 0 ]
+#then
+#  echo "Exiting with error"
+#  exit 1
+#fi
+#
+#echo "Unpacking Geant4Data"
+#tar -xzf $INPUT_DIR/Geant4Data.tar.gz --checkpoint=1000
+#if [ $? -ne 0 ]
+#then
+#  echo "Exiting with error"
+#  exit 1
+#fi
 CURDIR=$(pwd)
 echo $CURDIR/Geant4Data > g4bl/.data
 
 
-echo "Unpacking Inputfiles Pack"
-tar -xzf $INPUT_DIR/pack.tar.gz --checkpoint=1000
-if [ $? -ne 0 ]
-then
-  echo "Exiting with error"
-  exit 1
-fi
+#echo "Unpacking Inputfiles Pack"
+#tar -xzf $INPUT_DIR/pack.tar.gz --checkpoint=1000
+#if [ $? -ne 0 ]
+#then
+#  echo "Exiting with error"
+#  exit 1
+#fi
 
+#Run
 $CURDIR/g4bl/bin/g4bl $INFILE jobID=$JOBID totNumEv=$PARTPERJOB $ADDPARAM 2>&1 | tee g4bloutput.txt
 
 #Clean up
-rm -rf Geant4Data
-rm -rf g4bl
+#rm -rf Geant4Data
+#rm -rf g4bl
 
 
 
@@ -79,6 +90,20 @@ now=$(date -u +"%Y%m%dT%H%M%SZ")
 oldname=`ls H4*.root`
 newname=`echo ${oldname} | sed -e "s/.root/_${now}_${pfn}.root/"`
 mv ${oldname} ${newname}
+
+if [ $POLARITY != "+" ]; then
+  polar_str="pos"
+else
+  polar_str="neg"
+fi
+
+subrun=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f2 -d.`
+run=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f1 -d.`
+
+python $INPUT_DIR/make_g4bl_metadata.py \
+  --bl "H4" --polarity $polar_str --momentum $PMOMENTUM \
+  --run $run --subrun $subrun --name $newname \
+  --namespace ${JUSTIN_SCOPE}
 
 if [ $? -ne 0 ]
 then
