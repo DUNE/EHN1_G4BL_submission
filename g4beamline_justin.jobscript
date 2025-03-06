@@ -86,8 +86,11 @@ echo "running"
 echo "ran"
 
 #Clean up
-#rm -rf Geant4Data
-#rm -rf g4bl
+unlink Geant4Data
+rm -rf g4bl
+for i in *.in *.map; do
+  unlink ${i}
+done
 
 
 
