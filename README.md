@@ -73,6 +73,8 @@ total 472
 -rw------- 1 calcuttj dune    534 Mar  6 16:38 H2_v27c_1GeV_1_20250306T223828Z_000001.root.json
 -rw------- 1 calcuttj dune      7 Mar  6 16:38 justin-processed-pfns.txt
 </pre>
+
+These temp directories are periodically cleaned up, so if you produce anything you'd like to continue using for testing, copy the output to your data directory `/exp/dune/data/users/${USER}/`
 ## Example -- Full Submission
 
 The above command can be easily translated into a workflow submission by adding a few more arguments i.e. `--rss-mib`, `--max-distance`, `--output-pattern`, and `--wall-seconds`. 
