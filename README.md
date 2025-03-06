@@ -12,7 +12,9 @@ The actual simulation uses G4Beamline(Link?) and configurations created by the C
 
 For now, these will have to be uploaded to the cvmfs-based Rapid Code Distributon Service (RCDS -- see [this link]([url](https://cdcvs.fnal.gov/redmine/projects/jobsub/wiki/Rapid_Code_Distribution_Service_via_CVMFS_using_Jobsub)) for using RCDS on the grid with jobsub) for justin jobs.  In the future, these will be distributed on cvmfs for ease of use.
 
-=== Submitting with justin ===
+# Submitting with justin
+
+## Preparation
 Note: must use SL7 container in order to use ups to set up justin
 
 Set up ups etc: `source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh`
@@ -30,3 +32,28 @@ Upload each of the g4bl-related tarballs:
   pack_dir=$(justin-cvmfs-upload $jake_dir/pack.tar.gz)
   g4data_dir=$(justin-cvmfs-upload $jake_dir/Geant4Data.tar.gz)
 </pre>
+
+## Jobscript arguments
+Several arguments can be provided to the justin jobscript via setting environment variables. When running an interactive test or submitting via justin, 
+these are provided to the job's environment using the following syntax: `--env ENVVAR=VALUE`
+
+Full examples of using this syntax are shown below. For now, the following is a 
+list of all of the environment variables that can be configured for the job
+
+
+| Name  | Description | Default | 
+| ------------- | ------------- | ------------- |
+| POLARITY  | Polarity of beam line ("+" or "-") | + |
+| BEAMLINE  | Which beam line to use ("H4" or "H2") | H4 |
+| CENTRALP  | Momentum setting of VLE -- i.e. entering NP02/4 | 1.0 |
+| NPART     | How many Particles to send at the target (Need at least 100) | 100 |
+| G4DATA_DIR | Location of unpacked G4Data tarball | -- |
+| G4BL_DIR | Location of unpacked g4bl tarball | -- |
+| PACK_DIR | Location of unpacked "pack" tarball | -- |
+| INPUT_DIR | Location of unpacked input tarball (contains make_g4bl_metadata.py) | -- |
+
+
+
+## Example -- Interactive Test
+
+## Example -- Full Submission
