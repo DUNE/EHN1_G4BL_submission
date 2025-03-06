@@ -41,7 +41,7 @@ if __name__ == '__main__':
   parser.add_argument('--subrun', type=int, help='Subrun number', required=True)
   parser.add_argument('--name', type=str, help='File name', required=True)
   parser.add_argument('--namespace', type=str, help='File namespace/scope', required=True)
-  parser.add_argument('--path', default='', help='Optional path to file directory')
+  parser.add_argument('--path', default=None, help='Optional path to file directory')
   parser.add_argument('--checksum', action='store_true', help='Add adler32 checksum')
   parser.add_argument('--add_status', action='store_true', help='Add core.file_content_status=good')
   args = parser.parse_args()

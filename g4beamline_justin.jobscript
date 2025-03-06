@@ -13,7 +13,8 @@ fi
 export PMOMENTUM="${POLARITY:-+}80000"
 echo "PMOMENTUM: ${PMOMENTUM}"
 
-export INFILE=H4.in
+export BEAMLINE="${BEAMLINE:-H4}"
+export INFILE=${BEAMLINE}.in
 export CENTRALP="${CENTRALP:-1}" #Set the momentum going into protodune
 export MOMENTUMVLE="${POLARITY}${CENTRALP}" #"3"
 echo "MOMENTUMVLE: ${MOMENTUMVLE}"
@@ -36,11 +37,13 @@ ls $INPUT_DIR
 
 echo $G4DATA_DIR
 ls $G4DATA_DIR
-cp -rs $G4DATA_DIR ./Geant4Data/
+#cp -rs $G4DATA_DIR ./Geant4Data/
+ln -s $G4DATA_DIR/Geant4Data ./Geant4Data
 
 echo $G4BL_DIR
 ls $G4BL_DIR
-cp -rs $G4BL_DIR ./g4bl/
+cp -rs $G4BL_DIR/g4bl ./g4bl
+export G4BL_DIR=$PWD/g4bl
 
 echo $PACK_DIR
 ls $PACK_DIR
@@ -77,7 +80,10 @@ echo $CURDIR/Geant4Data > g4bl/.data
 #fi
 
 #Run
-$CURDIR/g4bl/bin/g4bl $INFILE jobID=$JOBID totNumEv=$PARTPERJOB $ADDPARAM 2>&1 | tee g4bloutput.txt
+echo "running"
+#$CURDIR
+./g4bl/bin/g4bl $INFILE jobID=$JOBID totNumEv=$PARTPERJOB $ADDPARAM 2>&1 | tee g4bloutput.txt
+echo "ran"
 
 #Clean up
 #rm -rf Geant4Data
@@ -87,7 +93,7 @@ $CURDIR/g4bl/bin/g4bl $INFILE jobID=$JOBID totNumEv=$PARTPERJOB $ADDPARAM 2>&1 |
 
 #Add timestamp to the output
 now=$(date -u +"%Y%m%dT%H%M%SZ")
-oldname=`ls H4*.root`
+oldname=`ls ${BEAMLINE}*.root`
 newname=`echo ${oldname} | sed -e "s/.root/_${now}_${pfn}.root/"`
 mv ${oldname} ${newname}
 
@@ -101,9 +107,9 @@ subrun=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f2 -d.`
 run=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f1 -d.`
 
 python $INPUT_DIR/make_g4bl_metadata.py \
-  --bl "H4" --polarity $polar_str --momentum $PMOMENTUM \
+  --bl "${BEAMLINE}" --polarity $polar_str --momentum $CENTRALP \
   --run $run --subrun $subrun --name $newname \
-  --namespace ${JUSTIN_SCOPE}
+  --namespace ${JUSTIN_SCOPE:-dummy}
 
 if [ $? -ne 0 ]
 then
