@@ -62,5 +62,15 @@ The following will run an interactive test of the jobscript and will impart 1000
                          --env PACK_DIR=$pack_dir/ --env INPUT_DIR=$input_dir/  \
                          --env BEAMLINE=H2 --env NPART=1000
  </pre>
- 
+ This took about 2 minutes to run during a single test on one of the dunegpvms. When finished, the temp workdir where output files can be found is shown by justin. Note that 
+ the actual directory will be different everytime, as a random hash is produced to create distinct locations.
+<pre>
+  ====End of jobscript execution====
+/tmp/justin-test-jobscript.0mv8dl/home/workspace:
+total 472
+-rw------- 1 calcuttj dune 176696 Mar  6 16:38 g4bloutput.txt
+-rw------- 1 calcuttj dune 283635 Mar  6 16:38 H2_v27c_1GeV_1_20250306T223828Z_000001.root
+-rw------- 1 calcuttj dune    534 Mar  6 16:38 H2_v27c_1GeV_1_20250306T223828Z_000001.root.json
+-rw------- 1 calcuttj dune      7 Mar  6 16:38 justin-processed-pfns.txt
+</pre>
 ## Example -- Full Submission
