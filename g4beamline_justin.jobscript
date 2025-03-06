@@ -24,11 +24,32 @@ export PARTPERJOB=${NPART:-100}
 export ADDPARAM="momentumVLE=$MOMENTUMVLE pMomentum=$PMOMENTUM"
 export ADDFILES=""
 
+
+if [ -z ${JUSTIN_PROCESSORS} ]; then
+  JUSTIN_PROCESSORS=1
+fi
+
+echo "Justin processors: ${JUSTIN_PROCESSORS}"
+
+export TF_NUM_THREADS=${JUSTIN_PROCESSORS}   
+export OPENBLAS_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export JULIA_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export MKL_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export NUMEXPR_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export OMP_NUM_THREADS=${JUSTIN_PROCESSORS}  
+
 JOBID=1
+#JOBID=`echo "${JUSTIN_JOBSUB_ID:-1}" | cut -f1 -d'@' | sed -e "s/\./_/"`
+#echo "Jobid: ${JOBID}" 
 #export JOBID=$(($st+1)) ##TODO -- REPLACE WITH JUSTIN JOB
 
 ##Get the MC number from this to bookkeep for justin
 DID_PFN_RSE=`$JUSTIN_PATH/justin-get-file`
+pfn_exit=$?
+if [ $pfn_exit -ne 0 ]; then
+  echo "Error in justin-get-file. Exiting safely"
+  exit 0
+fi
 echo "did_pfn_rse $DID_PFN_RSE"
 pfn=`echo $DID_PFN_RSE | cut -f2 -d' '`
 
@@ -83,6 +104,12 @@ echo $CURDIR/Geant4Data > g4bl/.data
 echo "running"
 #$CURDIR
 ./g4bl/bin/g4bl $INFILE jobID=$JOBID totNumEv=$PARTPERJOB $ADDPARAM 2>&1 | tee g4bloutput.txt
+g4bl_res=$?
+if [ $g4bl_res -ne 0 ]
+then
+  echo "Failed running g4bl"
+  exit $g4bl_res
+fi
 echo "ran"
 
 #Clean up
@@ -99,6 +126,12 @@ now=$(date -u +"%Y%m%dT%H%M%SZ")
 oldname=`ls ${BEAMLINE}*.root`
 newname=`echo ${oldname} | sed -e "s/.root/_${now}_${pfn}.root/"`
 mv ${oldname} ${newname}
+if [ $? -ne 0 ]
+then
+  echo "Failed renaming ${oldname} ${newname}"
+  exit 1
+fi
+
 
 if [ $POLARITY != "+" ]; then
   polar_str="pos"
