@@ -74,3 +74,16 @@ total 472
 -rw------- 1 calcuttj dune      7 Mar  6 16:38 justin-processed-pfns.txt
 </pre>
 ## Example -- Full Submission
+
+The above command can be easily translated into a workflow submission by adding a few more arguments i.e. `--rss-mib`, `--max-distance`, `--output-pattern`, and `--wall-seconds`. 
+Consult this [justin tutorial ]([url](https://justin.dune.hep.ac.uk/docs/tutorials.dune.md)) to learn what these mean and the other options available. 
+
+<pre>
+justin simple-workflow --jobscript g4beamline_justin.jobscript --monte-carlo 100 \
+                       --env G4DATA_DIR=$g4data_dir/ --env G4BL_DIR=$g4bl_dir/ \
+                       --env PACK_DIR=$pack_dir/ --env INPUT_DIR=$input_dir/  \
+                       --env BEAMLINE=H2 --env NPART=100 --rss-mib 3999 \
+                       --max-distance 30 \
+                       --output-pattern "*root:https://fndcadoor.fnal.gov:2880/dune/scratch/users/calcuttj/g4beamline_prod/H2_test_full/" \
+                       --wall-seconds 3600
+</pre>
