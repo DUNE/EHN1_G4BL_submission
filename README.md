@@ -1,4 +1,4 @@
-This repo holds a [justin]([url](https://justin.dune.hep.ac.uk/docs/)) jobscript and a python script to make metadata for H2 and H4 VLE beam line simulations. These files are then used as input to the larsoft-based ProtoDUNE-SP/HD/VD event generators.
+This repo holds a [justin](https://justin.dune.hep.ac.uk/docs/) jobscript and a python script to make metadata for H2 and H4 VLE beam line simulations. These files are then used as input to the larsoft-based ProtoDUNE-SP/HD/VD event generators.
 
 
 
@@ -10,7 +10,7 @@ The actual simulation uses G4Beamline(Link?) and configurations created by the C
   Geant4Data.tar.gz
 </pre>
 
-For now, these will have to be uploaded to the cvmfs-based Rapid Code Distributon Service (RCDS -- see [this link]([url](https://cdcvs.fnal.gov/redmine/projects/jobsub/wiki/Rapid_Code_Distribution_Service_via_CVMFS_using_Jobsub)) for using RCDS on the grid with jobsub) for justin jobs.  In the future, these will be distributed on cvmfs for ease of use.
+For now, these will have to be uploaded to the cvmfs-based Rapid Code Distributon Service (RCDS -- see [this link](https://cdcvs.fnal.gov/redmine/projects/jobsub/wiki/Rapid_Code_Distribution_Service_via_CVMFS_using_Jobsub)) for using RCDS on the grid with jobsub) for justin jobs.  In the future, these will be distributed on cvmfs for ease of use.
 
 # Submitting with justin
 
@@ -78,7 +78,7 @@ These temp directories are periodically cleaned up, so if you produce anything y
 ## Example -- Full Submission
 
 The above command can be easily translated into a workflow submission by adding a few more arguments i.e. `--rss-mib`, `--max-distance`, `--output-pattern`, and `--wall-seconds`. 
-Consult this [justin tutorial ]([url](https://justin.dune.hep.ac.uk/docs/tutorials.dune.md)) to learn what these mean and the other options available. 
+Consult this [justin tutorial](https://justin.dune.hep.ac.uk/docs/tutorials.dune.md)) to learn what these mean and the other options available. 
 
 <pre>
 justin simple-workflow --jobscript g4beamline_justin.jobscript --monte-carlo 100 \
