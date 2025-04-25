@@ -134,9 +134,9 @@ fi
 
 
 if [ $POLARITY != "+" ]; then
-  polar_str="pos"
-else
   polar_str="neg"
+else
+  polar_str="pos"
 fi
 
 subrun=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f2 -d.`
