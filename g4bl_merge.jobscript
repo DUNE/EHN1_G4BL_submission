@@ -1,0 +1,68 @@
+#!/bin/bash
+
+source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
+
+if [ -z ${DATASET} ]; then
+  echo "ERROR MUST SUPPLY DATASET"
+  exit 1
+fi
+
+if [ -z ${MERGE_DIR} ]; then
+  echo "ERROR MUST SUPPLY MERGE_DIR"
+  exit 1
+fi
+
+if [ -z ${JUSTIN_PROCESSORS} ]; then
+  JUSTIN_PROCESSORS=1
+fi
+
+echo "Justin processors: ${JUSTIN_PROCESSORS}"
+
+export TF_NUM_THREADS=${JUSTIN_PROCESSORS}   
+export OPENBLAS_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export JULIA_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export MKL_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export NUMEXPR_NUM_THREADS=${JUSTIN_PROCESSORS} 
+export OMP_NUM_THREADS=${JUSTIN_PROCESSORS}
+
+##Get the MC number from this to bookkeep for justin
+DID_PFN_RSE=`$JUSTIN_PATH/justin-get-file`
+pfn_exit=$?
+if [ $pfn_exit -ne 0 ]; then
+  echo "Error in justin-get-file. Exiting safely"
+  exit 0
+fi
+echo "did_pfn_rse $DID_PFN_RSE"
+pfn=`echo $DID_PFN_RSE | cut -f2 -d' '`
+
+
+setup root v6_28_12 -q e26:p3915:prof
+export METACAT_SERVER_URL=https://metacat.fnal.gov:9443/dune_meta_prod/app;
+export METACAT_AUTH_SERVER_URL=https://metacat.fnal.gov:8143/auth/dune
+setup metacat
+setup rucio
+
+LIMIT=${LIMIT:-100}
+
+subrun=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f2 -d.`
+run=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f1 -d.`
+
+echo $subrun $run
+
+python $MERGE_DIR/merge_g4bl.py \
+  --dataset ${DATASET}  \
+  -o inherit \
+  --limit ${LIMIT} \
+  --iter $(( 10#$pfn - 1 )) --run $run \
+  --subrun $subrun 
+  #--namespace ehn1-beam-np04
+
+if [ $? -ne 0 ]
+then
+  echo "Exiting with error"
+  exit 1
+else
+  echo "$pfn" > justin-processed-pfns.txt
+fi
+
+
