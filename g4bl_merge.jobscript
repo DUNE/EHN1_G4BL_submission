@@ -40,7 +40,7 @@ setup root v6_28_12 -q e26:p3915:prof
 export METACAT_SERVER_URL=https://metacat.fnal.gov:9443/dune_meta_prod/app;
 export METACAT_AUTH_SERVER_URL=https://metacat.fnal.gov:8143/auth/dune
 setup metacat
-setup rucio
+setup rucio v35_4_0
 
 LIMIT=${LIMIT:-100}
 
@@ -49,7 +49,7 @@ run=`echo $JUSTIN_JOBSUB_ID  | cut -f1 -d@ | cut -f1 -d.`
 
 echo $subrun $run
 
-python $MERGE_DIR/merge_g4bl.py \
+python $MERGE_DIR/merge_g4bl.py merge \
   --dataset ${DATASET}  \
   -o inherit \
   --limit ${LIMIT} \
@@ -64,5 +64,3 @@ then
 else
   echo "$pfn" > justin-processed-pfns.txt
 fi
-
-

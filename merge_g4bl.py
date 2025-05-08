@@ -8,9 +8,10 @@ from argparse import ArgumentParser as ap
 #from datetime import datetime
 import datetime
 
-import subprocess, os
+import subprocess, os, json, tarfile
+import time
+from termcolor import colored
 
-import json
 
 def finish_metadata(args, outname, results):
     print('Finishing metadata')
@@ -27,32 +28,8 @@ def finish_metadata(args, outname, results):
     return results
 
 
-
-if __name__ == '__main__':
-  parser = ap()
-  parser.add_argument('--dataset', type=str, required=True)
-  parser.add_argument('--namespace', type=str, default=None)
-  parser.add_argument('-o', type=str, default='inherit')
-  parser.add_argument('--skip', type=int, default=0)
-  parser.add_argument('--iter', type=int, default=None)
-  parser.add_argument('--limit', type=int, default=1000)
-  parser.add_argument('--run', type=int, default=1)
-  parser.add_argument('--subrun', type=int, default=1)
-  parser.add_argument('--dry-run', action='store_true')
-  parser.add_argument('--skip_checksum', action='store_true')
-  parser.add_argument('--iteration', type=int, default=2)
-  args = parser.parse_args()
-
-
-  to_skip = args.skip if args.iter is None else args.iter*args.limit
-
-  query = (
-        f'files from {args.dataset} where dune.output_status=confirmed'
-        f' ordered skip {to_skip} limit {args.limit}'
-  )
-  print(f'Querying {args.dataset} for {args.limit} files')
-  print(f'Query: {query}')
-  files = mc.query(query, with_metadata=True)
+def do_merge(args):
+  files = query(args)
 
   unique = [
     'beam.momentum',
@@ -131,7 +108,9 @@ if __name__ == '__main__':
   print(cmd)
 
   if not args.dry_run:
-    subprocess.run(cmd)
+    result = subprocess.run(cmd)
+    if result.returncode != 0:
+      raise Exception('Error in hadd')
 
     results = finish_metadata(
       args,
@@ -143,4 +122,205 @@ if __name__ == '__main__':
     with open(f'{output_name}.json', 'w') as fjson:
       fjson.write(json_object)
 
+
+
+# def do_check(args):
+#   print('Checking jobs')
+#   files = query(args)
+#   lognames = []
+#   for f in files:
+#     jobid = f['metadata']['dune.workflow']['job_id']
+#     logname = jobid.replace('@', '-') + '.logs.tgz'
+#     print("Found log:", logname)
+#     lognames.append({'scope':'justin-logs', 'name':logname})
+
+#   reps = rc.list_replicas(lognames, schemes=['root'])
+#   paths = []
+#   for rep in reps:
+#       #print(rep)
+#       if len(list(rep['pfns'].keys())) == 0:
+#           print(f'\tWarning: skipping file with no pfn {rep["scope"]}:{rep["name"]}')
+#           #if args.save_no_rse:
+#           #    with open(f'no_rse_{r}_{stamp}.txt', 'a') as f_no_rse:
+#           #        f_no_rse.write(f'{rep["scope"]}:{rep["name"]}\n')
+#           continue
+#       paths.append(list(rep['pfns'].keys())[0])
+#       print(paths[-1])
+#   print(f'Got {len(paths)} paths from {len(lognames)} files')
+  
+  
+#   local_logs = [p.split('/')[-1] for p in paths]
+#   for path in paths:
+#     print('Copying', path)
+#     ret = subprocess.run(['xrdcp', path, '.'])
+#     if ret.returncode != 0:
+#       raise Exception('Error copying', path)
+
+#     log = path.split('/')[-1]
+
+#     logtar = tarfile.open(log)
+
+#     found_joblog = False
+#     for f in logtar.getnames():
+#       if 'jobscript.log' in f:
+#         found_joblog = True
+#         joblog = logtar.extractfile(logtar.getmember(f))
+#         break
     
+#     if not found_joblog: raise Exception('Could not find jobscript in ', log)
+
+#     logstrs = joblog.read().decode('utf-8').split('\n')
+#     found_error = False
+#     for l in logstrs:
+#       if 'hadd Source' in l:
+#         print(l)
+#       if 'Error in <TFileMerger::AddFile>' in l:
+#         found_error = True
+#         print('FOUND ERROR IN', log, 'KEEPING LOG TARFILE')
+#     if not found_error: os.remove(log)
+
+def query(args):
+  to_skip = args.skip if args.iter is None else args.iter*args.limit
+
+  query = (
+        f'files from {args.dataset} where dune.output_status=confirmed'
+        f' ordered skip {to_skip} limit {args.limit}'
+  )
+  print(f'Querying {args.dataset} for {args.limit} files')
+  print(f'Query: {query}')
+  files = mc.query(query, with_metadata=True)
+  return files
+
+def get_webpage(ifile, jobid):
+    url = f'https://justin.dune.hep.ac.uk/dashboard/?method=show-job&jobsub_id={jobid}'
+    print(colored(f'Downloading {ifile} {jobid}', 'green'))
+    ret = subprocess.run(['wget', url], capture_output=True)
+    fname = f'index.html?method=show-job&jobsub_id={jobid}'
+    with open(fname, 'r') as flog:
+      return fname, flog.readlines()
+
+def get_justinlog(paths, jobid, ifile):
+  if jobid not in paths.keys():
+    print(colored(f'{jobid} not in paths', 'yellow'))
+    return None, None
+  path = paths[jobid]
+  print(colored(f'Copying {ifile} {jobid}', 'green'))
+  ret = subprocess.run(['xrdcp', path, '.'], capture_output=True)
+  if ret.returncode != 0:
+    raise Exception('Error copying', path)
+
+  log = path.split('/')[-1]
+
+  logtar = tarfile.open(log)
+
+  found_joblog = False
+  for f in logtar.getnames():
+    if 'jobscript.log' in f:
+      found_joblog = True
+      joblog = logtar.extractfile(logtar.getmember(f))
+      break
+  
+  if not found_joblog: raise Exception('Could not find jobscript in ', log)
+
+  logstrs = joblog.read().decode('utf-8').split('\n')
+  return log, logstrs
+
+def do_check(args):
+  print('Checking jobs')
+  files = query(args)
+  print('Got files')
+  lognames = []
+  all_inputs = []
+  expected_inputs = 0
+  jobids = []
+
+  for ifile, f in enumerate(files):
+    jobid = f['metadata']['dune.workflow']['job_id']
+    jobids.append(jobid)
+
+  #Iterate over the jobids, make lognames, and get the replcas from rucio
+  if not args.use_web:
+    lognames = []
+    for jobid in jobids:
+      logname = jobid.replace('@', '-') + '.logs.tgz'
+      print("Found log:", logname)
+      lognames.append({'scope':'justin-logs', 'name':logname})
+
+    reps = rc.list_replicas(lognames, schemes=['root'])
+    paths = {}
+    for rep in reps:
+        if len(list(rep['pfns'].keys())) == 0:
+            print(colored(f'\tWarning: skipping file with no pfn {rep["scope"]}:{rep["name"]}', 'yellow'))
+            continue
+        # print(rep['pfns'])
+        path = list(rep['pfns'].keys())[0]
+        jobid = path.split('/')[-1].replace('.logs.tgz', '').replace('-justin', '@justin')
+        paths[jobid] = path
+    print(f'Got {len(paths)} paths from {len(lognames)} files')
+
+  for ifile, jobid in enumerate(jobids):
+    found_error = False
+    found_input = False
+    if args.use_web:
+      fname, lines = get_webpage(ifile, jobid)
+    else:
+      fname, lines = get_justinlog(paths, jobid, ifile)
+    
+    if fname is None: continue
+    
+    if True:
+      # print(flog.readlines())
+      # lines = flog.readlines()
+      ninput = 0
+      this_expected = 0
+      for l in lines:
+        l = l.strip()
+        if 'hadd Source' in l:
+          # print(l)
+          found_input = True
+          all_inputs.append(l.split('/')[-1])
+          ninput += 1
+        if 'Got' in l and 'paths from' in l:
+          this_expected = int(l.split()[1])
+          expected_inputs += int(l.split()[1])
+          print(colored(l, 'green'))
+        if 'Error in <TFileMerger::AddFile>' in l or 'cannot open file' in l:
+          found_error = True
+          print(colored(f'FOUND ERROR IN {jobid} KEEPING LOG', 'red'))
+
+    # time.sleep(1)
+    if ninput != this_expected:
+      print(colored(f'Expected {this_expected}, got {ninput} in job {jobid}', 'yellow'))
+    if (not found_error) and found_input:
+      os.remove(fname)
+    elif not found_input:
+      print(colored(f'Did not find input for {f["name"]}', 'yellow'))
+
+
+  print(f'{len(all_inputs)} Inputs')
+  print(f'{len(set(all_inputs))} Unique Inputs')
+  print(f'Expected {expected_inputs}')
+
+if __name__ == '__main__':
+  parser = ap()
+  parser.add_argument('routine', type=str, default='merge', choices=['merge', 'check'])
+  parser.add_argument('--dataset', type=str, required=True)
+  parser.add_argument('--namespace', type=str, default=None)
+  parser.add_argument('-o', type=str, default='inherit')
+  parser.add_argument('--skip', type=int, default=0)
+  parser.add_argument('--iter', type=int, default=None)
+  parser.add_argument('--limit', type=int, default=1000)
+  parser.add_argument('--run', type=int, default=1)
+  parser.add_argument('--subrun', type=int, default=1)
+  parser.add_argument('--dry-run', action='store_true')
+  parser.add_argument('--skip_checksum', action='store_true')
+  parser.add_argument('--iteration', type=int, default=2)
+  parser.add_argument('--use_web', action='store_true')
+  args = parser.parse_args()
+
+  if args.routine == 'merge':
+    do_merge(args)
+  elif args.routine == 'check':
+    do_check(args)
+  # elif args.routine == 'check2':
+  #   do_check2(args)
