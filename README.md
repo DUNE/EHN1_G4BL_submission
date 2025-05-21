@@ -103,7 +103,14 @@ In order to submit a merging workflow request, run the following
   merge_dir=`justin-cvmfs-upload merge.tar` #Upload to CVMFS
   justin simple-workflow --jobscript g4bl_merge.jobscript --env MERGE_DIR=$merge_dir \
                          --env DATASET={prior dataset} \
-                         --monte-carlo 10 --env LIMIT={N} --max-distance 30 --rss-mib 3999 \
+                         --monte-carlo {N Outputs} --env LIMIT={N Inputs} --max-distance 30 --rss-mib 3999 \
                          --output-pattern "*root:{output dataset}" \
-                         --scope ehn1-beam-np04 --lifetime-days=90  
+                         --scope {output scope} --lifetime-days=90  
+</pre>
+
+It's suggested to run this merging in multiple steps, in order to not overload rucio with large requests for finding the file locations. For 30MB initial output files, we need 100 files merged together to reach
+3GB (a suitable size for storage). For this, we can do 2 stages each of 10 files merged together. Each initial output dataset (the actual simulation output) is intended to be merged separately from others. The overall
+production workflow would be 
+<pre>
+  G4BL Simulation --> Merge stage 1 --> Merge stage 2
 </pre>
