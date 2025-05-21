@@ -112,5 +112,5 @@ It's suggested to run this merging in multiple steps, in order to not overload r
 3GB (a suitable size for storage). For this, we can do 2 stages each of 10 files merged together. Each initial output dataset (the actual simulation output) is intended to be merged separately from others. The overall
 production workflow would be 
 <pre>
-  G4BL Simulation --> Merge stage 1 --> Merge stage 2
+  G4BL Simulation Workflow --> Merge stage 1 Workflow --> Merge stage 2 Workflow
 </pre>
