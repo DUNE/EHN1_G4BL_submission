@@ -10,7 +10,6 @@ import datetime
 
 import subprocess, os, json, tarfile
 import time
-from termcolor import colored
 
 
 def finish_metadata(args, outname, results):
@@ -93,6 +92,7 @@ def do_merge(args):
   #reps = rc.list_replicas(names, '''rse_expression='|'.join(args.rses)''')
   reps = rc.list_replicas(names, schemes=['root'])
   paths = []
+  inputnames = []
   for rep in reps:
       #print(rep)
       if len(list(rep['pfns'].keys())) == 0:
@@ -102,6 +102,7 @@ def do_merge(args):
           #        f_no_rse.write(f'{rep["scope"]}:{rep["name"]}\n')
           continue
       paths.append(list(rep['pfns'].keys())[0])
+      inputnames.append(f'{rep["name"]}\n')
   print(f'Got {len(paths)} paths from {len(names)} files')
 
   cmd = ['hadd', output_name] + paths
@@ -121,8 +122,58 @@ def do_merge(args):
     json_object = json.dumps(results, indent=2)
     with open(f'{output_name}.json', 'w') as fjson:
       fjson.write(json_object)
+    
+    with open(f'{output_name}_inputs.txt', 'w') as ftext:
+      ftext.writelines(inputnames)
 
 
+def check_inputs(args):
+  from termcolor import colored
+
+  print('Checking jobs')
+  files = query(args)
+  print('Got files')
+  all_inputs = []
+
+  input_list = [{'scope':f['namespace'], 'name':f['name']+'_inputs.txt'} for f in files]
+  
+  # for f in input_list: f['name'] = f['name'] + '_inputs.txt'
+  # print(f'Checking {input_list}')
+  reps = rc.list_replicas(input_list, schemes=['root'])
+
+  paths = []
+  for rep in reps:
+    if len(list(rep['pfns'].keys())) == 0:
+        print(f'\tWarning: skipping file with no pfn {rep["scope"]}:{rep["name"]}')
+        #if args.save_no_rse:
+        #    with open(f'no_rse_{r}_{stamp}.txt', 'a') as f_no_rse:
+        #        f_no_rse.write(f'{rep["scope"]}:{rep["name"]}\n')
+        continue
+    paths.append(list(rep['pfns'].keys())[0])
+  print(f'Got {len(paths)} paths from {len(input_list)} files')
+
+  for ifile, f in enumerate(paths):
+    if 'otter' in f: continue
+    print(f'Checking {ifile} {f}')
+
+    try:
+      fin = open(f, 'r')
+
+    # with open(f, 'r') as fin:
+      these_inputs = [l for l in fin.readlines()]
+      if len(these_inputs) != 10:
+        print(colored(f'Warning, found unexpected number of inputs {len(these_inputs)} {f.split("/")[-1]}', 'yellow'))
+      all_inputs += these_inputs
+    except:
+      print('blah')
+  print(f'Got {len(all_inputs)} inputs')
+  print(f'Got {len(set(all_inputs))} unique inputs')
+
+  stamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime('%Y%m%dT%H%M%S') 
+  outname = f'{args.dataset.replace(":", "_")}_inputs_{stamp}.txt'
+  print('Saving', outname)
+  with open(outname, 'w') as f:
+    f.writelines([l for l in list(set(all_inputs))])
 
 # def do_check(args):
 #   print('Checking jobs')
@@ -207,6 +258,7 @@ def get_justinlog(paths, jobid, ifile):
   print(colored(f'Copying {ifile} {jobid}', 'green'))
   ret = subprocess.run(['xrdcp', path, '.'], capture_output=True)
   if ret.returncode != 0:
+    # print(ret.stdout)
     raise Exception('Error copying', path)
 
   log = path.split('/')[-1]
@@ -226,6 +278,8 @@ def get_justinlog(paths, jobid, ifile):
   return log, logstrs
 
 def do_check(args):
+  from termcolor import colored
+
   print('Checking jobs')
   files = query(args)
   print('Got files')
@@ -254,6 +308,7 @@ def do_check(args):
             continue
         # print(rep['pfns'])
         path = list(rep['pfns'].keys())[0]
+        if 'otter' in path or 'xrootd-archive.cr.cnaf.infn' in path: continue
         jobid = path.split('/')[-1].replace('.logs.tgz', '').replace('-justin', '@justin')
         paths[jobid] = path
     print(f'Got {len(paths)} paths from {len(lognames)} files')
@@ -284,9 +339,10 @@ def do_check(args):
           this_expected = int(l.split()[1])
           expected_inputs += int(l.split()[1])
           print(colored(l, 'green'))
-        if 'Error in <TFileMerger::AddFile>' in l or 'cannot open file' in l:
+        if 'Error in <TFileMerger::AddFile>' in l or 'cannot open file' in l or 'error in header' in l:
           found_error = True
           print(colored(f'FOUND ERROR IN {jobid} KEEPING LOG', 'red'))
+          print(l)
 
     # time.sleep(1)
     if ninput != this_expected:
@@ -301,9 +357,26 @@ def do_check(args):
   print(f'{len(set(all_inputs))} Unique Inputs')
   print(f'Expected {expected_inputs}')
 
+  stamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime('%Y%m%dT%H%M%S') 
+  outname = f'{args.dataset.replace(":", "_")}_inputs_{stamp}.txt'
+  print('Saving', outname)
+  with open(outname, 'w') as f:
+    f.writelines([l + '\n' for l in list(set(all_inputs))])
+
+def crosscheck(args):
+  # infiles = args.dataset.split(':')
+  infiles = args.check_files
+  inputs = []
+  for fname in infiles:
+    with open(fname, 'r') as f:
+      inputs += [l.strip() for l in f.readlines()]
+
+  print(f'{len(inputs)} inputs')
+  print(f'{len(set(inputs))} unique inputs')
+
 if __name__ == '__main__':
   parser = ap()
-  parser.add_argument('routine', type=str, default='merge', choices=['merge', 'check'])
+  parser.add_argument('routine', type=str, default='merge', choices=['merge', 'check', 'crosscheck', 'check_inputs'])
   parser.add_argument('--dataset', type=str, required=True)
   parser.add_argument('--namespace', type=str, default=None)
   parser.add_argument('-o', type=str, default='inherit')
@@ -316,11 +389,15 @@ if __name__ == '__main__':
   parser.add_argument('--skip_checksum', action='store_true')
   parser.add_argument('--iteration', type=int, default=2)
   parser.add_argument('--use_web', action='store_true')
+  parser.add_argument('--check_files', type=str, nargs='+')
   args = parser.parse_args()
 
   if args.routine == 'merge':
     do_merge(args)
   elif args.routine == 'check':
+    from termcolor import colored
     do_check(args)
-  # elif args.routine == 'check2':
-  #   do_check2(args)
+  elif args.routine == 'crosscheck':
+    crosscheck(args)
+  elif args.routine == 'check_inputs':
+    check_inputs(args)
