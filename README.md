@@ -89,3 +89,28 @@ justin simple-workflow --jobscript g4beamline_justin.jobscript --monte-carlo 100
                        --output-pattern "*root:https://fndcadoor.fnal.gov:2880/dune/scratch/users/calcuttj/g4beamline_prod/H2_test_full/" \
                        --wall-seconds 3600
 </pre>
+
+
+# Merging Files Produced in Justin
+The tape storage used by DUNE works best with files on the order of 1-10 GB. A file produced by this G4BL simulation with 100K POT is on the order of 30MB, and so they need to be merged. Included in this
+repo is a python merging script and a justin jobscript to facilitate this. Within thre python script are also routines which are intended to be used interactively which check that no inputs are duplicated
+within the merging (as of writing, this has not yet ocurred, but it is still important to check), 
+
+In order to submit a merging workflow request, run the following
+
+<pre>
+  tar -cf merge.tar merge_g4bl.py #Make sure merge.tar is up to date
+  merge_dir=`justin-cvmfs-upload merge.tar` #Upload to CVMFS
+  justin simple-workflow --jobscript g4bl_merge.jobscript --env MERGE_DIR=$merge_dir \
+                         --env DATASET={prior dataset} \
+                         --monte-carlo {N Outputs} --env LIMIT={N Inputs} --max-distance 30 --rss-mib 3999 \
+                         --output-pattern "*root:{output dataset}" \
+                         --scope {output scope} --lifetime-days=90  
+</pre>
+
+It's suggested to run this merging in multiple steps, in order to not overload rucio with large requests for finding the file locations. For 30MB initial output files, we need 100 files merged together to reach
+3GB (a suitable size for storage). For this, we can do 2 stages each of 10 files merged together. Each initial output dataset (the actual simulation output) is intended to be merged separately from others. The overall
+production workflow would be 
+<pre>
+  G4BL Simulation Workflow --> Merge stage 1 Workflow --> Merge stage 2 Workflow
+</pre>
