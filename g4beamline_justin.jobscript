@@ -39,6 +39,7 @@ export NUMEXPR_NUM_THREADS=${JUSTIN_PROCESSORS}
 export OMP_NUM_THREADS=${JUSTIN_PROCESSORS}  
 
 JOBID=1
+env
 #JOBID=`echo "${JUSTIN_JOBSUB_ID:-1}" | cut -f1 -d'@' | sed -e "s/\./_/"`
 #echo "Jobid: ${JOBID}" 
 #export JOBID=$(($st+1)) ##TODO -- REPLACE WITH JUSTIN JOB
@@ -52,6 +53,8 @@ if [ $pfn_exit -ne 0 ]; then
 fi
 echo "did_pfn_rse $DID_PFN_RSE"
 pfn=`echo $DID_PFN_RSE | cut -f2 -d' '`
+JOBID=$pfn
+echo "JOBID: ${JOBID}"
 
 echo $INPUT_DIR
 ls $INPUT_DIR
