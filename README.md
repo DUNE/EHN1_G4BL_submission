@@ -117,6 +117,6 @@ A description of the necesary (justin) arguments and environment variabiles is a
 | LIMIT  | Env. Var | Number of files merged per output file |
 | --monte-carlo | Argument | Number of output files |
 | --output-pattern | Argument | Expression for matching output files & the target output dataset |
-| --scope | Argument | Target output scope -- Use ehn1-beam-np04 for the H4-VLE Beamline (PDHD/NP04) and ehn1-beam-np02 for the H2-VLE Beamline (PDVD/NP02) -- CHECK WITH STEVE TIMM THAT THIS IS AVAILABLE |
+| --scope | Argument | Target output scope -- Use "usertests" for testing. For production, use ehn1-beam-np04 for the H4-VLE Beamline (PDHD/NP04) and ehn1-beam-np02 for the H2-VLE Beamline (PDVD/NP02) -- CHECK WITH STEVE TIMM THAT THIS IS AVAILABLE |
 
-For 30MB initial output files, we need 100 files merged together to reach 3GB (a suitable size for storage). 
+For 30MB initial output files, we need 100 files merged together to reach 3GB (a suitable size for storage). In the case that we produced 1000 outputs from the simulation step, we would need 10 merged files to accomplish this (LIMIT = 100, monte-carlo = 10)
