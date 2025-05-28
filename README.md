@@ -93,7 +93,7 @@ justin simple-workflow --jobscript g4beamline_justin.jobscript --monte-carlo 100
 
 # Merging Files Produced in Justin
 The tape storage used by DUNE works best with files on the order of 1-10 GB. A file produced by this G4BL simulation with 100K POT is on the order of 30MB, and so they need to be merged. Included in this
-repo is a python merging script and a justin jobscript to facilitate this. Within thre python script are also routines which are intended to be used interactively which check that no inputs are duplicated
+repo is a python merging script and a justin jobscript to facilitate this. Within the python script are also routines which are intended to be used interactively which check that no inputs are duplicated
 within the merging (as of writing, this has not yet ocurred, but it is still important to check), 
 
 In order to submit a merging workflow request, run the following
@@ -108,9 +108,15 @@ In order to submit a merging workflow request, run the following
                          --scope {output scope} --lifetime-days=90  
 </pre>
 
-It's suggested to run this merging in multiple steps, in order to not overload rucio with large requests for finding the file locations. For 30MB initial output files, we need 100 files merged together to reach
-3GB (a suitable size for storage). For this, we can do 2 stages each of 10 files merged together. Each initial output dataset (the actual simulation output) is intended to be merged separately from others. The overall
-production workflow would be 
-<pre>
-  G4BL Simulation Workflow --> Merge stage 1 Workflow --> Merge stage 2 Workflow
-</pre>
+A description of the necesary (justin) arguments and environment variabiles is as follows
+
+| Name  | Type | Description | 
+| ------------- | ------------- | ------------- |
+| DATASET | Env. Var | Input dataset for merging |
+| MERGE_DIR  | Env. Var | Similar to above, the uploaded merge.tar |
+| LIMIT  | Env. Var | Number of files merged per output file |
+| --monte-carlo | Argument | Number of output files |
+| --output-pattern | Argument | Expression for matching output files & the target output dataset |
+| --scope | Argument | Target output scope -- Use ehn1-beam-np04 for the H4-VLE Beamline (PDHD/NP04) and ehn1-beam-np02 for the H2-VLE Beamline (PDVD/NP02) -- CHECK WITH STEVE TIMM THAT THIS IS AVAILABLE |
+
+For 30MB initial output files, we need 100 files merged together to reach 3GB (a suitable size for storage). 
