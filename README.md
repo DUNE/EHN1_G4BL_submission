@@ -120,3 +120,17 @@ A description of the necesary (justin) arguments and environment variabiles is a
 | --scope | Argument | Target output scope -- Use "usertests" for testing. For production, use ehn1-beam-np04 for the H4-VLE Beamline (PDHD/NP04) and ehn1-beam-np02 for the H2-VLE Beamline (PDVD/NP02) -- CHECK WITH STEVE TIMM THAT THIS IS AVAILABLE |
 
 For 30MB initial output files, we need 100 files merged together to reach 3GB (a suitable size for storage). In the case that we produced 1000 outputs from the simulation step, we would need 10 merged files to accomplish this (LIMIT = 100, monte-carlo = 10)
+
+
+# Checking Merged Files
+The merged files have the inputs to the merging step listed as their parents in metacat. This can be used to check that merged files do not include duplicate inputs. Check this using 
+
+<pre>
+  python merge_g4bl.py check_parents --dataset {merged dataset} 
+</pre>
+
+This will print out the number of input files and the number of unique input files. If these differ, that is an indication of duplicated inputs, and the issue causing this should be diagnosed.
+As of writing, this has not happened, but it is worth checking.
+
+
+
