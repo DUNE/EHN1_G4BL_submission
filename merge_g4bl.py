@@ -93,6 +93,7 @@ def do_merge(args):
   reps = rc.list_replicas(names, schemes=['root'])
   paths = []
   inputnames = []
+  parents = []
   for rep in reps:
       #print(rep)
       if len(list(rep['pfns'].keys())) == 0:
@@ -103,6 +104,10 @@ def do_merge(args):
           continue
       paths.append(list(rep['pfns'].keys())[0])
       inputnames.append(f'{rep["name"]}\n')
+      parents.append(
+        {'namespace':rep['scope'], 'name':rep['name']}
+      )
+
   print(f'Got {len(paths)} paths from {len(names)} files')
 
   cmd = ['hadd', output_name] + paths
@@ -119,6 +124,8 @@ def do_merge(args):
       {'metadata':output_metadata}
     )
 
+    results['parents'] = parents
+
     json_object = json.dumps(results, indent=2)
     with open(f'{output_name}.json', 'w') as fjson:
       fjson.write(json_object)
@@ -127,6 +134,26 @@ def do_merge(args):
       ftext.writelines(inputnames)
 
 
+def check_parents(args):
+  from termcolor import colored
+
+  print('Checking jobs')
+  files = query(args, with_parents=True)
+  print('Got files')
+
+  all_fids = []
+  for f in files:
+    parents = f['parents']
+    for p in parents:
+      all_fids.append(p['fid'])
+  print('All parents:', len(all_fids))
+  print('Unique parents:', len(set(all_fids)))
+  stamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime('%Y%m%dT%H%M%S') 
+  outname = f'{args.dataset.replace(":", "_")}_inputs_{stamp}.txt'
+  print('Saving', outname)
+  with open(outname, 'w') as f:
+    f.writelines([l+'\n' for l in list(set(all_fids))])
+  
 def check_inputs(args):
   from termcolor import colored
 
@@ -230,7 +257,7 @@ def check_inputs(args):
 #         print('FOUND ERROR IN', log, 'KEEPING LOG TARFILE')
 #     if not found_error: os.remove(log)
 
-def query(args):
+def query(args, with_parents=False):
   to_skip = args.skip if args.iter is None else args.iter*args.limit
 
   query = (
@@ -239,7 +266,7 @@ def query(args):
   )
   print(f'Querying {args.dataset} for {args.limit} files')
   print(f'Query: {query}')
-  files = mc.query(query, with_metadata=True)
+  files = mc.query(query, with_metadata=True, with_provenance=with_parents)
   return files
 
 def get_webpage(ifile, jobid):
@@ -376,7 +403,13 @@ def crosscheck(args):
 
 if __name__ == '__main__':
   parser = ap()
-  parser.add_argument('routine', type=str, default='merge', choices=['merge', 'check', 'crosscheck', 'check_inputs'])
+  parser.add_argument(
+    'routine', type=str, default='merge',
+    choices=[
+      'merge', 'check', 'crosscheck', 'check_inputs',
+      'check_parents'
+    ]
+  )
   parser.add_argument('--dataset', type=str, required=True)
   parser.add_argument('--namespace', type=str, default=None)
   parser.add_argument('-o', type=str, default='inherit')
@@ -401,3 +434,5 @@ if __name__ == '__main__':
     crosscheck(args)
   elif args.routine == 'check_inputs':
     check_inputs(args)
+  elif args.routine == 'check_parents':
+    check_parents(args)
