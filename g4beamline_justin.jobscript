@@ -38,11 +38,6 @@ export MKL_NUM_THREADS=${JUSTIN_PROCESSORS}
 export NUMEXPR_NUM_THREADS=${JUSTIN_PROCESSORS} 
 export OMP_NUM_THREADS=${JUSTIN_PROCESSORS}  
 
-JOBID=1
-env
-#JOBID=`echo "${JUSTIN_JOBSUB_ID:-1}" | cut -f1 -d'@' | sed -e "s/\./_/"`
-#echo "Jobid: ${JOBID}" 
-#export JOBID=$(($st+1)) ##TODO -- REPLACE WITH JUSTIN JOB
 
 ##Get the MC number from this to bookkeep for justin
 DID_PFN_RSE=`$JUSTIN_PATH/justin-get-file`

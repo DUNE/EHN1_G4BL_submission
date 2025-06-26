@@ -144,8 +144,12 @@ def check_parents(args):
   all_fids = []
   for f in files:
     parents = f['parents']
+    parent_fids = []
     for p in parents:
       all_fids.append(p['fid'])
+      parent_fids.append(p['fid'])
+    if len(set(parent_fids)) != len(parent_fids):
+      print(colored(f"Duplicate parent detected in file {f['fid']}", 'red'))
   print('All parents:', len(all_fids))
   print('Unique parents:', len(set(all_fids)))
   stamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime('%Y%m%dT%H%M%S') 
