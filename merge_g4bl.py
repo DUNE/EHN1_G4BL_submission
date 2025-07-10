@@ -143,13 +143,21 @@ def check_parents(args):
 
   all_fids = []
   for f in files:
+    all_mcids = []
     parents = f['parents']
     parent_fids = []
     for p in parents:
       all_fids.append(p['fid'])
       parent_fids.append(p['fid'])
+      # mc_id = mc.get_file(fid=p['fid'])['name'].replace('.root', '').split('_')[-1]
+      # if mc_id in all_mcids:
+      #   print(colored(f'Found duplicate MC ID {mc_id}', 'red'))
+      # all_mcids.append(mc_id)
+
     if len(set(parent_fids)) != len(parent_fids):
       print(colored(f"Duplicate parent detected in file {f['fid']}", 'red'))
+
+      
   print('All parents:', len(all_fids))
   print('Unique parents:', len(set(all_fids)))
   stamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime('%Y%m%dT%H%M%S') 
@@ -308,6 +316,7 @@ def get_justinlog(paths, jobid, ifile):
   logstrs = joblog.read().decode('utf-8').split('\n')
   return log, logstrs
 
+
 def do_check(args):
   from termcolor import colored
 
@@ -394,6 +403,74 @@ def do_check(args):
   with open(outname, 'w') as f:
     f.writelines([l + '\n' for l in list(set(all_inputs))])
 
+def check_duplicate_inputs(args):
+  files = query(args)
+  mc_ids = dict()
+  for f in files:
+    mc_id = f['name'].replace('.root', '').split('_')[-1]
+    # print(mc_id)
+    if mc_id not in mc_ids.keys():
+      mc_ids[mc_id] = []
+    else:
+      print('Found duplicate', mc_id)
+      # mc_ids[mc_id] += 1
+    mc_ids[mc_id].append(f['fid'])
+
+  file_states = dict()
+
+  workflow = args.dataset.split('-')[-1].replace('w', '').replace('s1p1', '')
+  print(workflow)
+  cmd = ['justin', 'show-files', '--workflow-id', workflow]
+  proc = subprocess.run(cmd, capture_output=True)
+  for l in proc.stdout.decode('utf-8').split('\n'):
+    splitted = l.split()
+    if len(splitted) < 4: continue
+    # print(splitted[2], splitted[-1])
+    file_states[splitted[-1].split('-')[-1]] = splitted[2]
+  
+
+  for id, fids in mc_ids.items():
+    count = len(fids)
+    if count > 1:
+      print(id, count)
+      for fid in fids:
+        print('\t', id, fid)
+        children = mc.get_file(fid=fid, with_provenance=True)['children']
+        for c in children:
+          child = mc.get_file(fid=c['fid'], with_metadata=True)
+          cmd = child['metadata']
+          print('\t\t', child['name'], cmd['dune.workflow']['workflow_id'], cmd['dune.workflow']['job_id'])
+    else:
+      if file_states[id] != 'processed':
+        print(f'Found file with MC ID {id} with state {file_states[id]}')
+
+
+def check_jobsub_states(args):
+  files = query(args)
+  jobids_from_files = []
+  for f in files:
+    jobid = f['metadata']['dune.workflow']['job_id']
+    print(jobid)
+    jobids_from_files.append(jobid)
+
+  workflow = args.dataset.split('-')[-1].replace('w', '').replace('s1p1', '')
+  print(workflow)
+
+  job_states = dict()
+
+  cmd = ['justin', 'show-jobs', '--workflow-id', workflow]
+  proc = subprocess.run(cmd, capture_output=True)
+  for l in proc.stdout.decode('utf-8').split('\n'):
+    splitted = l.split()
+    if len(splitted) < 4: continue
+    # print(splitted[0], splitted[3])
+    job_states[splitted[0]] = splitted[3]
+  
+  for jobid in jobids_from_files:
+    state = job_states[jobid]
+    # print(state)
+    if state != 'finished': print('Unfinished', jobid, state)
+    else: print('Finished')
 def crosscheck(args):
   # infiles = args.dataset.split(':')
   infiles = args.check_files
@@ -411,7 +488,8 @@ if __name__ == '__main__':
     'routine', type=str, default='merge',
     choices=[
       'merge', 'check', 'crosscheck', 'check_inputs',
-      'check_parents'
+      'check_parents', 'check_duplicate_inputs',
+      'check_jobsub_states'
     ]
   )
   parser.add_argument('--dataset', type=str, required=True)
@@ -440,3 +518,7 @@ if __name__ == '__main__':
     check_inputs(args)
   elif args.routine == 'check_parents':
     check_parents(args)
+  elif args.routine == 'check_duplicate_inputs':
+    check_duplicate_inputs(args)
+  elif args.routine == 'check_jobsub_states':
+    check_jobsub_states(args)
