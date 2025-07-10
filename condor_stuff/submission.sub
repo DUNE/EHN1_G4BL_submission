@@ -1,0 +1,35 @@
+executable            = $ENV(EXSCRIPT)
+universe              = vanilla
+output                = /afs/cern.ch/user/n/ncharito/H4_Prod/$(ClusterId).out
+error                 = /afs/cern.ch/user/n/ncharito/H4_Prod/$(ClusterId).err
+log                   = /afs/cern.ch/user/n/ncharito/H4_Prod/$(ClusterId).log
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files  = root://eosuser.cern.ch/$ENV(EOSCONDDIR)/pack.tar.gz,root://eosuser.cern.ch//eos/user/n/ncharito/H4_MARCEL/G4BL/g4bl.tar.gz,root://eosuser.cern.ch//eos/user/n/ncharito/H4_MARCEL/G4BL/Geant4Data.tar.gz,$ENV(ADDFILES)
+transfer_output_files = ""
+
+job_machine_attrs = Machine
+job_machine_attrs_history_length = 5
+MY.WantOS = "el7"
+
+getenv = true
+environment = "st=$(STEP)"
+
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (JobStatus == 5) && (NumJobStarts < 5) && ( (CurrentTime - EnteredCurrentStatus) > (15*60) )
+periodic_hold = (JobStatus == 2) && ( (CurrentTime - EnteredCurrentStatus) > $ENV(TIMELIMIT) )
+
++MaxRuntime = $ENV(TIMELIMIT)
+
++AccountingGroup="$ENV(ACCGROUP)"
+
+#request_cpus = 1
+#request_memory = $ENV(REQMEMORY)
+#request_disk = 2000000
+
+Rank = Mips
+
+N = $ENV(JOBS)
+
+queue $(N)
