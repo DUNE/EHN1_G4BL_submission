@@ -153,6 +153,7 @@ bool ProcessDetector(TTree * tree, std::map<int, Particle> & particle_map, Detec
 int main(int argc, char ** argv) {
 
     std::string input_file{""}, output_file{""};
+    int start = std::numeric_limits<int>::max();
     int max_events{std::numeric_limits<int>::max()};
     // bool verbose = false;
     for (int iarg = 1; iarg < argc; ++iarg) {
@@ -172,6 +173,10 @@ int main(int argc, char ** argv) {
         else if (strcmp(argv[iarg], "-v") == 0) {
             std::cout << "RUNNING VERBOSELY" << std::endl;
             verbose = true;
+        }
+        else if (strcmp(argv[iarg], "--start") == 0) {
+            start = std::atoi(argv[++iarg]);
+            std::cout << "START AT " << start << std::endl;
         }
     }
 
@@ -229,6 +234,7 @@ int main(int argc, char ** argv) {
     max_events = (max_events > max_tree_count) ? max_tree_count : max_events;
     std::cout << "Max events: " << max_events << std::endl;
 
+    if (start != std::numeric_limits<int>::max()) overall_event = start;
 
     int bt_count = -1;
     bool first_ibt = true;
