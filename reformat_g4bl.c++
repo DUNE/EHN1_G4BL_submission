@@ -2,7 +2,7 @@
 #include <TFile.h>
 #include <iostream>
 #include <map>
-
+// #include "Particle.h"
 bool verbose = false;
 
 class DetectorHolder {
@@ -20,6 +20,7 @@ public:
     float TrackID{0};
     float ParentID{0};
     int current_event{0};
+    bool done{false};
     std::map<std::string, float *> branches{
         {"x", &x},
         {"y", &y},
@@ -80,14 +81,14 @@ struct Particle {
         Pz.push_back(holder->Pz);
     }
 
-    void merge(DetectorHolder * holder, std::string name) {
+    void merge(DetectorHolder * holder, std::string name, int overall_event) {
         if (PDGid != 22 &&
             ((TrackID != static_cast<int>(holder->TrackID)) ||
             (PDGid != static_cast<int>(holder->PDGid)) ||
             (EventID != static_cast<int>(holder->EventID)) || 
             (ParentID != static_cast<int>(holder->ParentID)))
             /*std::find(detectors.begin(), detectors.end(), name) != detectors.end()*/) {
-                std::cerr << "This part: " << *this << "\nInput: " << (*holder) << std::endl; 
+                std::cerr << "(" << overall_event << ") This part: " << *this << "\nInput: (" << name << ") " << (*holder) << std::endl; 
                 throw std::runtime_error("ATTEMPTING TO MERGE INVALID PARTS");
             }
         detectors.push_back(name);
@@ -116,12 +117,13 @@ struct Particle {
 
 bool ProcessDetector(TTree * tree, std::map<int, Particle> & particle_map, DetectorHolder * holder, int overall_event, std::string name) {
 
-    if (holder->current_event >= tree->GetEntries()) {
-        std::cout << "Past " << name << std::endl;
+    if (holder->done) {
+        // std::cout << "Past " << name << std::endl;
         return true;
     }
 
-    for (int i = holder->current_event; i < tree->GetEntries(); ++i) {
+    int i = holder->current_event;
+    for (; i < tree->GetEntries(); ++i) {
         tree->GetEntry(i);
         if (verbose)
             std::cout << "Got event " << i << " in " << name << std::endl;
@@ -137,12 +139,16 @@ bool ProcessDetector(TTree * tree, std::map<int, Particle> & particle_map, Detec
             particle_map.insert({holder->TrackID, Particle(holder, name)});
         }
         else {
-            particle_map[holder->TrackID].merge(holder, name);
+            particle_map[holder->TrackID].merge(holder, name, overall_event);
         }
     }
+    if (i >= tree->GetEntries()) {
+        holder->done = true;
+    }
 
-    if (holder->current_event >= tree->GetEntries()) {
-        std::cout << "Past " << name << std::endl;
+
+    if (holder->done) {
+        // std::cout << "Past " << name << std::endl;
         return true;
     }
 
@@ -150,35 +156,36 @@ bool ProcessDetector(TTree * tree, std::map<int, Particle> & particle_map, Detec
 
 }
 
-int main(int argc, char ** argv) {
-
-    std::string input_file{""}, output_file{""};
+// int main(int argc, char ** argv) {
+int reformat_g4bl(std::string input_file, std::string output_file, int n=-1) {
+    // std::string input_file{""}, output_file{""};
     int start = std::numeric_limits<int>::max();
     int max_events{std::numeric_limits<int>::max()};
     // bool verbose = false;
-    for (int iarg = 1; iarg < argc; ++iarg) {
-        if (strcmp(argv[iarg], "-i") == 0) {
-            input_file = argv[++iarg];
-            std::cout << "INPUT FILE " << input_file << std::endl;
-        }
-        else if (strcmp(argv[iarg], "-o") == 0) {
-            output_file = argv[++iarg];
-            std::cout << "OUTPUT FILE " << output_file << std::endl;
-        }
-        else if (strcmp(argv[iarg], "-n") == 0) {
-            int these_max_events = std::atoi(argv[++iarg]);
-            if (these_max_events > 0) max_events = these_max_events;
-            std::cout << "Max events: " << max_events << std::endl;
-        }
-        else if (strcmp(argv[iarg], "-v") == 0) {
-            std::cout << "RUNNING VERBOSELY" << std::endl;
-            verbose = true;
-        }
-        else if (strcmp(argv[iarg], "--start") == 0) {
-            start = std::atoi(argv[++iarg]);
-            std::cout << "START AT " << start << std::endl;
-        }
-    }
+    // for (int iarg = 1; iarg < argc; ++iarg) {
+    //     if (strcmp(argv[iarg], "-i") == 0) {
+    //         input_file = argv[++iarg];
+    //         std::cout << "INPUT FILE " << input_file << std::endl;
+    //     }
+    //     else if (strcmp(argv[iarg], "-o") == 0) {
+    //         output_file = argv[++iarg];
+    //         std::cout << "OUTPUT FILE " << output_file << std::endl;
+    //     }
+    //     else if (strcmp(argv[iarg], "-n") == 0) {
+    //         int these_max_events = std::atoi(argv[++iarg]);
+    //         if (these_max_events > 0) max_events = these_max_events;
+            if (n > 0) max_events = n;
+    //         std::cout << "Max events: " << max_events << std::endl;
+    //     }
+    //     else if (strcmp(argv[iarg], "-v") == 0) {
+    //         std::cout << "RUNNING VERBOSELY" << std::endl;
+    //         verbose = true;
+    //     }
+    //     else if (strcmp(argv[iarg], "--start") == 0) {
+    //         start = std::atoi(argv[++iarg]);
+    //         std::cout << "START AT " << start << std::endl;
+    //     }
+    // }
 
     //Define the set of 'detectors' (aka devices) through which particles may travel
     std::string first_detector = "BeforeTarget";
@@ -230,7 +237,7 @@ int main(int argc, char ** argv) {
         int entries = next_trees[s]->GetEntries();
         max_tree_count = (max_tree_count < entries) ? entries : max_tree_count;
     }
-    std::cout << "Max count " << max_tree_count << std::endl;
+    // std::cout << "Max count " << max_tree_count << std::endl;
     max_events = (max_events > max_tree_count) ? max_tree_count : max_events;
     std::cout << "Max events: " << max_events << std::endl;
 
@@ -296,6 +303,26 @@ int main(int argc, char ** argv) {
 
     // Loop over the entries in before target
     
+    TFile fout(output_file.c_str(), "recreate");
+    TTree out_tree("tree", "");
+    std::vector<Particle> output_vector;
+    std::vector<int> output_TrackID, output_EventID, output_PDGid, output_ParentID;
+    std::vector<std::vector<std::string>> output_detectors;
+    std::vector<std::vector<float>> output_xs, output_ys, output_zs, output_ts,
+                                         output_Pxs, output_Pys, output_Pzs;
+    out_tree.Branch("TrackIDs", &output_TrackID);
+    out_tree.Branch("EventIDs", &output_EventID);
+    out_tree.Branch("PDGids", &output_PDGid);
+    out_tree.Branch("ParentIDs", &output_ParentID);
+    out_tree.Branch("detectors", &output_detectors);
+    out_tree.Branch("xs", &output_xs);
+    out_tree.Branch("ys", &output_ys);
+    out_tree.Branch("zs", &output_zs);
+    out_tree.Branch("Pxs", &output_Pxs);
+    out_tree.Branch("Pys", &output_Pys);
+    out_tree.Branch("Pzs", &output_Pzs);
+    out_tree.Branch("ts", &output_ts);
+    out_tree.Branch("particles", &output_vector);
     while (bt_count < (max_events-1)) {
                 if (verbose) {
 
@@ -328,19 +355,27 @@ int main(int argc, char ** argv) {
 
             if (particle_map.size() > 0) {
                 ++bt_count;
-                // std::cout << bt_count << " " << particle_map.size() << std::endl;
+                std::cout << bt_count << " " << particle_map.size() << std::endl;
             }
             else {
                 std::cout << overall_event << " Empty event. Moving on and not counting for limit%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;  
-            } 
+            }
+
+            output_vector.clear();
+            for (auto & [id, part] : particle_map) {
+                output_vector.push_back(part);
+            }
+            out_tree.Fill();
             particle_map.clear();
             ++overall_event;
             if (all_done) {
                 std::cout << "Hit limit on all trees" << std::endl;
+                break;
             }
     }
     
-
+    out_tree.Write();
+    fout.Close();
     f->Close();
 
     return 0;
