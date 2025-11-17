@@ -61,6 +61,49 @@ if [ $? -ne 0 ]
 then
   echo "Exiting with error"
   exit 1
-else
-  echo "$pfn" > justin-processed-pfns.txt
 fi
+
+if [ -n "${do_counts}" ]
+then
+  echo "Will do counting"
+
+  if [ -n "${DUNESW_TAR}" ]
+  then
+    export PRODUCTS=${DUNESW_TAR}:${PRODUCTS}
+  fi
+
+
+  DUNESW_VERSION=${DUNESW_VERSION:-v10_13_00d00}
+  setup dunesw $DUNESW_VERSION -q e26:prof
+
+  setup_exit=$?
+  if [ $setup_exit -ne 0 ]; then
+    echo "Failed to setup dunesw $DUNESW_VERSION"
+    exit $setup_exit
+  fi
+  if [ -n "$extra_fcl_path" ]; then
+    export FHICL_FILE_PATH=${extra_fcl_path}:${FHICL_FILE_PATH}
+    echo "Added ${extra_fcl_path} to fhicl file path"
+    echo "${FHICL_FILE_PATH}"
+  fi
+
+ 
+
+  fcl_file=${fcl_file:-"run_eventcount.fcl"}
+  outname=$(ls *root | head -n 1) #Risky: assuming one root file
+  runEventCounter -c $fcl_file -i $outname -o "eventcount.txt" -n ${JUSTIN_PROCESSORS}
+  count_exit=$?
+  if [ $count_exit -ne 0 ]; then
+    echo "Failed to run counts"
+    exit $count_exit
+  fi
+ 
+  count=$(head -n 1 eventcount.txt | cut -d' ' -f2)
+  echo "Count: $count"
+
+  sed -i "/metadata/a\
+    \"core.event_count\": ${count}," ${outname}.json
+fi
+
+
+echo "$pfn" > justin-processed-pfns.txt
