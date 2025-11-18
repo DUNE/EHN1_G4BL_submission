@@ -14,7 +14,15 @@ export PMOMENTUM="${POLARITY:-+}80000"
 echo "PMOMENTUM: ${PMOMENTUM}"
 
 export BEAMLINE="${BEAMLINE:-H4}"
+export DOCUSTOM=${DOCUSTOM:-0}
 export INFILE=${BEAMLINE}.in
+if [ $DOCUSTOM -eq 1 ] && [ ${BEAMLINE} == "H4" ]; then
+  echo "ERROR. CANNOT DO CUSTOM BEAM LINE WITH H4"
+  exit 1
+fi
+
+
+
 export CENTRALP="${CENTRALP:-1}" #Set the momentum going into protodune
 export MOMENTUMVLE="${POLARITY}${CENTRALP}" #"3"
 echo "MOMENTUMVLE: ${MOMENTUMVLE}"
@@ -24,6 +32,13 @@ export PARTPERJOB=${NPART:-100}
 export ADDPARAM="momentumVLE=$MOMENTUMVLE pMomentum=$PMOMENTUM"
 export ADDFILES=""
 
+if  [ $DOCUSTOM -eq 1 ]; then
+  INFILE=$(echo $INFILE | sed -e "s/\.in/custom.in/")
+  echo "Added custom: ${INFILE}"
+  # RUNTYPE="${RUNTYPE:-8GeV}"
+  # ADDPARAM="${ADDPARAM} runType=${RUNTYPE}"
+  # echo "Added to params: ${ADDPARAM}"
+fi
 
 if [ -z ${JUSTIN_PROCESSORS} ]; then
   JUSTIN_PROCESSORS=1
