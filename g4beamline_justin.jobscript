@@ -57,6 +57,8 @@ export OMP_NUM_THREADS=${JUSTIN_PROCESSORS}
 ##Get the MC number from this to bookkeep for justin
 DID_PFN_RSE=`$JUSTIN_PATH/justin-get-file`
 pfn_exit=$?
+echo "jgf exit: $pfn_exit"
+echo "jgf return: $DID_PFN_RSE"
 if [ $pfn_exit -ne 0 ]; then
   echo "Error in justin-get-file. Exiting safely"
   exit 0
