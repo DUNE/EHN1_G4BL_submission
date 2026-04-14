@@ -27,10 +27,10 @@ Make a tarball of the metadata script and upload to RCDS: `tar -cf input.tar mak
 
 Upload each of the g4bl-related tarballs:
 <pre>
-  jake_dir=/exp/dune/data/users/calcuttj/G4Beamline/H4_G4BL_DUNE/Jake_testing/
-  g4bl_dir=$(justin-cvmfs-upload $jake_dir/g4bl.tar.gz)
-  pack_dir=$(justin-cvmfs-upload $jake_dir/pack.tar.gz)
-  g4data_dir=$(justin-cvmfs-upload $jake_dir/Geant4Data.tar.gz)
+jake_dir=/exp/dune/data/users/calcuttj/G4Beamline/H4_G4BL_DUNE/Jake_testing/
+g4bl_dir=$(justin-cvmfs-upload $jake_dir/g4bl.tar.gz)
+pack_dir=$(justin-cvmfs-upload $jake_dir/pack.tar.gz)
+g4data_dir=$(justin-cvmfs-upload $jake_dir/Geant4Data.tar.gz)
 </pre>
 
 ## Jobscript arguments
